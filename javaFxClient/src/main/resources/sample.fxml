@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:controller="ru.svetlov.chatClient.Controller"
+      xmlns:fx="http://javafx.com/fxml" alignment="center">
+    <TextArea fx:id="messagesArea"
+              VBox.vgrow="ALWAYS"
+              focusTraversable="false"
+              editable="false"/>
+    <HBox alignment="CENTER_LEFT" minHeight="25">
+        <Button onAction="#btnMessageTargetClick"
+                text="\@all"
+                minWidth="50" prefWidth="80"/>
+        <TextField fx:id="messageField"
+                   onAction="#btnSendClick"
+                   promptText="type your message here ..."
+                   HBox.hgrow="ALWAYS"
+                   minWidth="250"/>
+        <Button onAction="#btnSendClick"
+                text="Send!"
+                minWidth="50" prefWidth="80" />
+    </HBox>
+</VBox>
