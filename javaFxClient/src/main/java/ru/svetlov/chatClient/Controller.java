@@ -10,7 +10,6 @@ import ru.svetlov.chatClient.io.NetClient;
 
 import java.io.IOException;
 import java.net.URL;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -48,10 +47,7 @@ public class Controller implements Initializable {
     private void update(TextArea mArea) {
         mArea.clear();
         StringBuilder sb = new StringBuilder();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yy hh:mm:ss");
         for (String message : messages) {
-            sb.append(sdf.format(System.currentTimeMillis()));
-            sb.append(" ");
             sb.append(message);
             sb.append("\n");
         }
@@ -72,8 +68,7 @@ public class Controller implements Initializable {
                 if (incomingMessages.isEmpty()) return;
                 while (!incomingMessages.isEmpty()) {
                     try {
-                        String in = incomingMessages.take();
-                        messages.add(in);
+                        process(incomingMessages.take());
                     } catch (InterruptedException e) {
                         System.out.println("TimerTask interrupted");
                     }
@@ -81,5 +76,31 @@ public class Controller implements Initializable {
                 update(messagesArea);
             }
         }, 500, 1000);
+    }
+
+    private void process(String msg) {
+        if (msg == null) return;
+        if (msg.startsWith("/")){
+            String[] commands = msg.split(" ", 2);
+            switch (commands[0]){
+                case "/logout":{
+                    timer.cancel();
+                    netClient.disconnect();
+                    //new Alert(Alert.AlertType.ERROR, "Connection closed", ButtonType.OK ).show();
+                    break;
+                }
+                case "/login_ok":
+                case "/login_nok": {
+                    //new Alert(Alert.AlertType.ERROR, commands[1], ButtonType.OK ).show();
+                    messages.add(commands[1]);
+                    break;
+                }
+                default:
+                    throw new IllegalStateException("Unexpected value: " + msg);
+            }
+        } else {
+            messages.add(msg);
+        }
+        update(messagesArea);
     }
 }

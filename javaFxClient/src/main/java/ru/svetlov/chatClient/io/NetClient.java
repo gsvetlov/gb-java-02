@@ -34,22 +34,26 @@ public class NetClient implements Runnable {
     @Override
     public void run() {
         connect();
-        while (!Thread.interrupted()) {
-            try {
+        try {
+            while (socket.isConnected()) {
                 String incoming = inStream.readUTF();
                 processQueue.add(incoming);
-            } catch (IOException ex) {
-                System.out.println(ex.getMessage());
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
             }
+        } catch (IOException ex) {
+            System.out.println(ex.getMessage());
+            disconnect();
         }
     }
 
     public void send(String msg) throws IOException {
         outStream.writeUTF(msg);
+    }
+
+    public void disconnect() {
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
