@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 
-public class NetClient implements Runnable {
+public class NetClient {
     private final String host;
     private final int port;
     private final BlockingQueue<String> processQueue;
@@ -25,27 +25,28 @@ public class NetClient implements Runnable {
             socket = new Socket(host, port);
             inStream = new DataInputStream(socket.getInputStream());
             outStream = new DataOutputStream(socket.getOutputStream());
+            Thread listener = new Thread( () -> {
+                try {
+                    while (socket.isConnected()) {
+                        String incoming = inStream.readUTF();
+                        processQueue.add(incoming);
+                    }
+                } catch (IOException ex) {
+                    System.out.println(ex.getMessage());
+                } finally {
+                    disconnect();
+                }
+            });
+            listener.setDaemon(true);
+            listener.start();
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
             ex.printStackTrace();
         }
     }
 
-    @Override
-    public void run() {
-        connect();
-        try {
-            while (socket.isConnected()) {
-                String incoming = inStream.readUTF();
-                processQueue.add(incoming);
-            }
-        } catch (IOException ex) {
-            System.out.println(ex.getMessage());
-            disconnect();
-        }
-    }
-
     public void send(String msg) throws IOException {
+        System.out.println(msg);
         outStream.writeUTF(msg);
     }
 
