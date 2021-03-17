@@ -64,7 +64,7 @@ public class Server {
     public synchronized void logout(ClientHandler client) {
         clients.remove(client);
         publish(client.getNick() + " is leaving the chat. See ya later!", null);
-        client.sendMessage("/logout");
+        //client.sendMessage("/logout");
     }
 
     public void process(String msg, ClientHandler client) {

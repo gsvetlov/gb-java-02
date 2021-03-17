@@ -3,54 +3,54 @@ package ru.svetlov.chatClient;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import ru.svetlov.chatClient.io.NetClient;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.*;
 
 public class Controller implements Initializable {
     @FXML
-    TextField messageField;
+    TextField messageField, loginField;
     @FXML
     TextArea messagesArea;
     @FXML
-    HBox loginBox;
+    HBox messageBox, loginBox;
     @FXML
-    TextField tfLogin;
-    @FXML
-    HBox messageBox;
+    Button btnLogin;
 
     NetClient netClient;
-    BlockingQueue<String> incomingMessages;
     Timer timer;
-    private final List<String> messages = new ArrayList<>();
+    private List<String> messages;
     private String nickName;
+
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        netClient = new NetClient("localhost", 8189);
+        messages = new ArrayList<>();
+        timer = new Timer(true);
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                while (netClient.getSize() != 0)
+                    process(netClient.dequeue());
+            }
+        }, 1000, 200);
+    }
 
 
     public void btnSendClick() {
         String messageText = messageField.getText();
+        messageField.requestFocus();
         if (messageText.isEmpty()) return;
         sendMessage(messageText);
     }
 
     private void sendMessage(String message) {
-        try {
-            netClient.send(message);
-            messageField.clear();
-        } catch (IOException ex) {
-            System.out.println(ex.getMessage());
-            new Alert(
-                    Alert.AlertType.ERROR,
-                    "Unable to send message\n" + ex.getMessage(),
-                    ButtonType.OK).show();
-        }
+        netClient.send(message);
+        messageField.clear();
     }
 
     private void update(TextArea mArea) {
@@ -63,47 +63,36 @@ public class Controller implements Initializable {
         mArea.appendText(sb.toString());
     }
 
-    @Override
-    public void initialize(URL location, ResourceBundle resources) {
-        processLogout();
-        incomingMessages = new LinkedBlockingQueue<>();
-        netClient = new NetClient("localhost", 8189, incomingMessages);
-        timer = new Timer(true);
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                if (incomingMessages.isEmpty()) return;
-                while (!incomingMessages.isEmpty()) {
-                    try {
-                        process(incomingMessages.take());
-                    } catch (InterruptedException e) {
-                        System.out.println("TimerTask interrupted");
-                    }
-                }
-                update(messagesArea);
-            }
-        }, 500, 1000);
-    }
+
 
     private void process(String msg) {
         if (msg == null) return;
-        if (msg.startsWith("/")){
+        if (msg.startsWith("/")) {
             String[] commands = msg.split(" ", 2);
-            switch (commands[0]){
-                case "/logout":{
-                    timer.cancel();
-                    netClient.disconnect();
-                    //new Alert(Alert.AlertType.ERROR, "Connection closed", ButtonType.OK ).show();
+            switch (commands[0]) {
+                case "/logout": {
+                    Platform.runLater(() ->
+                            new Alert(
+                                    Alert.AlertType.ERROR,
+                                    "Connection closed",
+                                    ButtonType.OK
+                            ).showAndWait());
                     break;
                 }
                 case "/login_ok": {
                     messages.add(commands[1]);
-                    processLogin();
+                    Platform.runLater(this::processLogin);
+                    break;
                 }
                 case "/login_nok": {
-                    Platform.runLater(()-> new Alert(Alert.AlertType.ERROR, commands[1], ButtonType.OK ).showAndWait());
+                    Platform.runLater(() ->
+                            new Alert(
+                                    Alert.AlertType.ERROR,
+                                    commands[1],
+                                    ButtonType.OK
+                            ).showAndWait());
                     messages.add(commands[1]);
-                    processLogout();
+                    Platform.runLater(this::processLogout);
                     break;
                 }
                 default:
@@ -117,17 +106,28 @@ public class Controller implements Initializable {
 
     private void processLogout() {
         nickName = null;
-        loginBox.setVisible(true);
+        loginField.clear();
+        loginField.setEditable(true);
+        loginField.setPromptText("type your name to login ...");
+        loginField.requestFocus();
+        btnLogin.setText("Login");
+        messageBox.setManaged(false);
         messageBox.setVisible(false);
+        netClient.disconnect();
     }
 
     private void processLogin() {
-        loginBox.setVisible(false);
+        loginField.setEditable(false);
+        loginField.setFocusTraversable(false);
+        loginField.setText(nickName);
+        btnLogin.setText("Logout");
+        messageBox.setManaged(true);
         messageBox.setVisible(true);
+        messageField.requestFocus();
     }
 
     public void btnLoginClick() {
-        if (tfLogin.getText().isEmpty()) {
+        if (loginField.getText().isEmpty()) {
             new Alert(
                     Alert.AlertType.ERROR,
                     "Nickname can't be empty",
@@ -136,19 +136,26 @@ public class Controller implements Initializable {
             return;
         }
         try {
-            nickName = tfLogin.getText();
+        if (nickName == null){
+
+            nickName = loginField.getText();
             netClient.connect();
             netClient.send("/login " + nickName);
-        }catch (IOException ex){
+
+        } else {
+            netClient.send("/logout");
+            processLogout();
+        }
+        } catch (IOException ex) {
             new Alert(
                     Alert.AlertType.ERROR,
                     "NetworkError",
                     ButtonType.OK
             ).showAndWait();
             System.out.println(ex.getMessage());
-            netClient.disconnect();
             processLogout();
         }
+
 
     }
 }

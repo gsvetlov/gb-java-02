@@ -23,10 +23,10 @@ public class ClientHandler {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
             Thread clientThread = new Thread(() -> {
-                try{
+                try {
                     authenticate();
                     if (nick != null) communicate();
-                } catch (IOException ex){
+                } catch (IOException ex) {
                     System.out.println(ex.getMessage());
                 } finally {
                     disconnect();
@@ -43,10 +43,12 @@ public class ClientHandler {
     private void disconnect() {
         if (socket == null) return;
         try {
-            server.logout(this);
-            socket.close();
+            if (socket.isConnected()) {
+                server.logout(this);
+                socket.close();
+            }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
     }
 
@@ -77,7 +79,7 @@ public class ClientHandler {
 
     public void sendMessage(String message) {
         try {
-                out.writeUTF(message);
+            out.writeUTF(message);
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
             disconnect();
