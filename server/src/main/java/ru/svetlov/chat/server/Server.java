@@ -1,19 +1,23 @@
 package ru.svetlov.chat.server;
 
+import ru.svetlov.chat.server.user.UserInfo;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Server {
     private final int serverPort;
     private final ServerSocket serverSocket;
     private final List<ClientHandler> clients;
 
+    private Map<String, UserInfo> users;
+
     public Server(int port) throws IOException {
+        initUserInfo();
         serverPort = port;
         serverSocket = new ServerSocket(serverPort);
         clients = new ArrayList<>();
@@ -47,39 +51,42 @@ public class Server {
             logout(clients.get(0));
     }
 
-    public String[] login(String s, ClientHandler client) {
-        String[] result;
-        if (isUnique(s)) {
-            clients.add(client);
-            result = new String[]{s, "/login_ok Login successful"};
-            publish(s + " joined the chat. Welcome!", null);
+    public LoginResponse login(String loginMsg, ClientHandler client) {
 
-        } else {
-            result = new String[]{null, "/login_nok User already connected"};
+        String[] userInfoMsg = loginMsg.split("\\s", 2);
+        UserInfo user = users.get(userInfoMsg[0]);
+
+        if (user == null || !user.checkPassword(userInfoMsg[1])) {
+            return new LoginResponse(null, ServerResponse.LOGIN_FAIL_INCORRECT);
         }
 
-        return result;
+        if (isOnline(user.getNickname())) {
+            return new LoginResponse(null, ServerResponse.LOGIN_FAIL_CONNECTED);
+        } else {
+            clients.add(client);
+            publish(user.getNickname() + " joined the chat. Welcome!", null);
+            return new LoginResponse(user, ServerResponse.LOGIN_OK);
+        }
     }
 
     public synchronized void logout(ClientHandler client) {
         clients.remove(client);
         publish(client.getNick() + " is leaving the chat. See ya later!", null);
-        //client.sendMessage("/logout");
     }
 
     public void process(String msg, ClientHandler client) {
         String[] commands = msg.split(" ", 2);
         switch (commands[0]) {
-            case "/who_am_i": {
+            case Commands.WHO_AM_I: {
                 client.sendMessage("You are " + client.getNick());
                 break;
             }
-            case "/logout":
-            case "/exit": {
+            case Commands.LOGOUT:
+            case Commands.EXIT: {
                 logout(client);
                 break;
             }
-            case "/w": {
+            case Commands.PRIVATE_MESSAGE: {
                 String[] split = commands[1].split(" ", 2);
                 ClientHandler destination = getClientByNick(split[0]);
                 if (destination != null) {
@@ -88,14 +95,29 @@ public class Server {
                     client.sendMessage(out);
                 }
                 else
-                    client.sendMessage("Unknown user " + split[0]);
+                    client.sendMessage("User " + split[0] + " offline or unknown ");
+                break;
+            }
+            case Commands.CHANGE_NICK:{
+                if (changeUserNick(commands[1], client))
+                    client.sendMessage(ServerResponse.CHANGE_NICK_OK);
+                else
+                    client.sendMessage(ServerResponse.CHANGE_NICK_FAIL);
                 break;
             }
             default: {
-                client.sendMessage("unknown command");
+                client.sendMessage(Commands.UNKNOWN);
             }
         }
 
+    }
+
+    private synchronized boolean changeUserNick(String newNick, ClientHandler client){
+        if (isOnline(newNick)) return false;
+        String oldNick = client.getNick();
+        client.getUser().setNickname(newNick);
+        publish(oldNick + " has changed name to " + newNick, null);
+        return true;
     }
 
     private synchronized ClientHandler getClientByNick(String s) {
@@ -123,12 +145,27 @@ public class Server {
                 msg;
     }
 
-    private synchronized boolean isUnique(String s) {
+    private synchronized boolean isOnline(String s) {
         for (ClientHandler client : clients) {
             if (s.equals(client.getNick()))
-                return false;
+                return true;
         }
-        return true;
+        return false;
+    }
+
+    public void initUserInfo(){
+        users = new HashMap<>();
+        List<UserInfo> list = Arrays.asList(
+                new UserInfo("bob", "bob1234","GreatBob"),
+                new UserInfo("jacky", "jacky1234","Jacky"),
+                new UserInfo("mike", "mike1234","Michael"),
+                new UserInfo("pat", "pat1234","Pat"),
+                new UserInfo("sue", "sue1234","Sue"),
+                new UserInfo("mary", "mary1234","Mary Jane")
+        );
+        for(UserInfo user : list){
+            users.put(user.getUsername(),user);
+        }
     }
 
 
