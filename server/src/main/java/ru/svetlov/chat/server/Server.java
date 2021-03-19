@@ -65,6 +65,7 @@ public class Server {
         } else {
             clients.add(client);
             publish(user.getNickname() + " joined the chat. Welcome!", null);
+            publishClientsList();
             return new LoginResponse(user, ServerResponse.LOGIN_OK);
         }
     }
@@ -72,6 +73,8 @@ public class Server {
     public synchronized void logout(ClientHandler client) {
         clients.remove(client);
         publish(client.getNick() + " is leaving the chat. See ya later!", null);
+        publishClientsList();
+
     }
 
     public void process(String msg, ClientHandler client) {
@@ -166,6 +169,19 @@ public class Server {
         for(UserInfo user : list){
             users.put(user.getUsername(),user);
         }
+    }
+
+    public void publishClientsList(){
+        publish(getClientsList(), null);
+    }
+
+    private synchronized String getClientsList(){
+        StringBuilder sb = new StringBuilder("/clients_list ");
+        for (ClientHandler c : clients) {
+            sb.append(c.getNick()).append(" ");
+        }
+        sb.setLength(sb.length() - 1);
+        return sb.toString();
     }
 
 
