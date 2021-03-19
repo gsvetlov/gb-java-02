@@ -1,6 +1,9 @@
 package ru.svetlov.chat.server;
 
+import ru.svetlov.chat.server.user.UserInfo;
+
 import java.io.*;
+import java.util.*;
 
 public class ServerApp {
     public static Server server;
@@ -24,4 +27,6 @@ public class ServerApp {
 
         System.out.println("ServerApp shutdown gracefully");
     }
+
+
 }

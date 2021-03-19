@@ -1,5 +1,7 @@
 package ru.svetlov.chat.server;
 
+import ru.svetlov.chat.server.user.UserInfo;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,10 +12,15 @@ public class ClientHandler {
     private final Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
-    private String nick;
+    private UserInfo user;
+    private boolean hasLogin;
+
+    public UserInfo getUser() {
+        return user;
+    }
 
     public String getNick() {
-        return nick;
+        return user.getNickname();
     }
 
     public ClientHandler(Socket socket, Server server) {
@@ -25,7 +32,7 @@ public class ClientHandler {
             Thread clientThread = new Thread(() -> {
                 try {
                     authenticate();
-                    if (nick != null) communicate();
+                    if (hasLogin) communicate();
                 } catch (IOException ex) {
                     System.out.println(ex.getMessage());
                 } finally {
@@ -53,18 +60,20 @@ public class ClientHandler {
     }
 
     private void authenticate() throws IOException {
-        while (true) {
+        while (!hasLogin) {
             String[] msg = in.readUTF().split(" ", 2);
             if (msg.length < 2) continue;
-            if ("/login".equals(msg[0])) {
-                msg = server.login(msg[1], this);
-                sendMessage(msg[1]);
-                if (msg[0] != null) {
-                    nick = msg[0];
-                    break;
-                }
+            if (msg[0].equals(Commands.LOGIN)) {
+                LoginResponse response = server.login(msg[1], this);
+                if (response.getUser() == null)
+                    continue;
+                sendMessage(response.getMessage());
+                user = response.getUser();
+                hasLogin = true;
+                break;
             }
         }
+
     }
 
     private void communicate() throws IOException {
