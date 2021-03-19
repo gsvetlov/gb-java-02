@@ -20,6 +20,8 @@ public class Controller implements Initializable {
     HBox messageBox, loginBox;
     @FXML
     Button btnLogin;
+    @FXML
+    ListView clientsList;
 
     NetClient netClient;
     Timer timer;
@@ -62,7 +64,6 @@ public class Controller implements Initializable {
         }
         mArea.appendText(sb.toString());
     }
-
 
 
     private void process(String msg) {
@@ -136,16 +137,16 @@ public class Controller implements Initializable {
             return;
         }
         try {
-        if (nickName == null){
+            if (nickName == null) {
 
-            nickName = loginField.getText();
-            netClient.connect();
-            netClient.send("/login " + nickName);
+                nickName = loginField.getText();
+                netClient.connect();
+                netClient.send("/login " + nickName);
 
-        } else {
-            netClient.send("/logout");
-            processLogout();
-        }
+            } else {
+                netClient.send("/logout");
+                processLogout();
+            }
         } catch (IOException ex) {
             new Alert(
                     Alert.AlertType.ERROR,

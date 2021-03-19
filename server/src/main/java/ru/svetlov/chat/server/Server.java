@@ -53,6 +53,7 @@ public class Server {
             clients.add(client);
             result = new String[]{s, "/login_ok Login successful"};
             publish(s + " joined the chat. Welcome!", null);
+            publishClientsList();
 
         } else {
             result = new String[]{null, "/login_nok User already connected"};
@@ -64,7 +65,7 @@ public class Server {
     public synchronized void logout(ClientHandler client) {
         clients.remove(client);
         publish(client.getNick() + " is leaving the chat. See ya later!", null);
-        //client.sendMessage("/logout");
+        publishClientsList();
     }
 
     public void process(String msg, ClientHandler client) {
@@ -104,6 +105,19 @@ public class Server {
                 return client;
         }
         return  null;
+    }
+
+    public synchronized void publishClientsList(){
+        publish(getClientsList(), null);
+    }
+
+    private synchronized String getClientsList(){
+        StringBuilder sb = new StringBuilder("/clients_list ");
+        for (ClientHandler c : clients){
+            sb.append(c.getNick()).append(" ");
+        }
+        sb.setLength(sb.length() - 1);
+        return sb.toString();
     }
 
     public synchronized void publish(String msg, ClientHandler client) {
