@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:controller="ru.svetlov.chatClient.Controller" xmlns:fx="http://javafx.com/fxml">
+    <HBox fx:id="loginBox">
+        <TextField fx:id="loginField"
+                   onAction="#btnLoginClick"
+                   promptText="type your name to login ..."
+                   HBox.hgrow="ALWAYS"/>
+        <Button fx:id="btnLogin"
+                text="Login"
+                onAction="#btnLoginClick"
+                focusTraversable="false"/>
+    </HBox>
+    <HBox VBox.vgrow="ALWAYS">
+        <TextArea fx:id="messagesArea"
+                  wrapText="true"
+                  focusTraversable="false"
+                  editable="false"/>
+        <ListView fx:id="clientsList"/>
+    </HBox>
+    <HBox fx:id="messageBox" visible="false" managed="false">
+        <TextField fx:id="messageField"
+                   onAction="#btnSendClick"
+                   promptText="type your message here ..."
+                   HBox.hgrow="ALWAYS"/>
+        <Button onAction="#btnSendClick"
+                text="Send"
+                focusTraversable="false"/>
+    </HBox>
+</VBox>
