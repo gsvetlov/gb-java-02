@@ -6,7 +6,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-public class testChatClient extends Application {
+public class ChatClient extends Application {
 
     public static void main(String[] args) {
         launch(args);

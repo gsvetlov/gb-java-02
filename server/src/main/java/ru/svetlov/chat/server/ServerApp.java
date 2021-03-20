@@ -1,14 +1,12 @@
 package ru.svetlov.chat.server;
 
-import ru.svetlov.chat.server.user.UserInfo;
-
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 public class ServerApp {
-    public static Server server;
+    static Server server;
     public static void main(String[] args) {
-
         try {
             server = new Server(8189);
         } catch (IOException e) {
@@ -16,7 +14,7 @@ public class ServerApp {
         }
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
             while (true) {
-                if ((reader.readLine()).equals("exit")) {
+                if (reader.readLine().equals("exit")) {
                     server.shutdown();
                     break;
                 }
@@ -24,9 +22,5 @@ public class ServerApp {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-
-        System.out.println("ServerApp shutdown gracefully");
     }
-
-
 }

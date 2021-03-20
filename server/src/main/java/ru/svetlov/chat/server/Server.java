@@ -24,7 +24,7 @@ public class Server {
         Thread listener = new Thread(()->{
             try {
                 while (!Thread.interrupted()) {
-                    System.out.printf("Listening on [localhost:%d]\n", serverPort);
+                    System.out.printf("Listening on [localhost:%d]%n", serverPort);
                     Socket socket = serverSocket.accept();
                     System.out.println("connection established...");
                     new ClientHandler(socket, this);
