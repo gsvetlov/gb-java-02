@@ -21,7 +21,7 @@ public class Controller implements Initializable {
     @FXML
     Button btnLogin;
     @FXML
-    ListView clientsList;
+    ListView<String> clientsList;
 
     NetClient netClient;
     Timer timer;
@@ -80,8 +80,9 @@ public class Controller implements Initializable {
                             ).showAndWait());
                     break;
                 }
-                case "/login_ok": {
-                    messages.add(commands[1]);
+                case "/login_ok":
+                case "/change_nick_ok": {
+                    nickName = commands[1];
                     Platform.runLater(this::processLogin);
                     break;
                 }
@@ -96,6 +97,18 @@ public class Controller implements Initializable {
                     Platform.runLater(this::processLogout);
                     break;
                 }
+
+                case "/clients_list":{
+                    String[] clients = commands[1].split("\\s");
+                    System.out.println(commands[1]);
+                    Platform.runLater(()->{
+                        clientsList.getItems().clear();
+                        for (String c : clients){
+                            clientsList.getItems().add(c);
+                        }
+                    });
+                    break;
+                }
                 default:
                     throw new IllegalStateException("Unexpected value: " + msg);
             }
@@ -106,10 +119,9 @@ public class Controller implements Initializable {
     }
 
     private void processLogout() {
-        nickName = null;
         loginField.clear();
         loginField.setEditable(true);
-        loginField.setPromptText("type your name to login ...");
+        loginField.setPromptText("type your name and password to login ...");
         loginField.requestFocus();
         btnLogin.setText("Login");
         messageBox.setManaged(false);
@@ -128,23 +140,22 @@ public class Controller implements Initializable {
     }
 
     public void btnLoginClick() {
-        if (loginField.getText().isEmpty()) {
+        if (loginField.getText().isEmpty()) { // для простоты вводим имя пользователя и пароль через пробел
             new Alert(
                     Alert.AlertType.ERROR,
-                    "Nickname can't be empty",
+                    "Username can't be empty",
                     ButtonType.OK
             ).showAndWait();
             return;
         }
         try {
             if (nickName == null) {
-
-                nickName = loginField.getText();
                 netClient.connect();
-                netClient.send("/login " + nickName);
+                netClient.send("/login " + loginField.getText());
 
             } else {
                 netClient.send("/logout");
+                nickName = null;
                 processLogout();
             }
         } catch (IOException ex) {
@@ -156,7 +167,5 @@ public class Controller implements Initializable {
             System.out.println(ex.getMessage());
             processLogout();
         }
-
-
     }
 }

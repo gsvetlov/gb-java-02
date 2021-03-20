@@ -5,7 +5,7 @@
 
 <VBox fx:controller="ru.svetlov.chatClient.Controller"
       xmlns:fx="http://javafx.com/fxml" alignment="center">
-    <HBox fx:id="loginBox" alignment="CENTER_LEFT" minHeight="25">
+    <HBox fx:id="loginBox" visible="true" managed="true" alignment="CENTER_LEFT" minHeight="25">
         <TextField fx:id="loginField"
                    onAction="#btnLoginClick"
                    promptText="type your name to login ..."
@@ -15,17 +15,18 @@
                 onAction="#btnLoginClick"
                 text="Login"
                 focusTraversable="false"
-                minWidth="50" prefWidth="80" />
+                minWidth="50" prefWidth="80"/>
     </HBox>
-    <HBox>
+    <HBox minHeight="200">
         <TextArea fx:id="messagesArea"
                   VBox.vgrow="ALWAYS"
+                  wrapText="true"
                   focusTraversable="false"
-                  editable="false"/>
+                  editable="false"
+                  />
         <ListView fx:id="clientsList"
-                  focusTraversable="false"/>
+                  />
     </HBox>
-
     <HBox fx:id="messageBox" visible="false" managed="false" alignment="CENTER_LEFT" minHeight="25">
         <TextField fx:id="messageField"
                    onAction="#btnSendClick"
@@ -35,6 +36,6 @@
         <Button onAction="#btnSendClick"
                 text="Send!"
                 focusTraversable="false"
-                minWidth="50" prefWidth="80" />
+                minWidth="50" prefWidth="80"/>
     </HBox>
 </VBox>

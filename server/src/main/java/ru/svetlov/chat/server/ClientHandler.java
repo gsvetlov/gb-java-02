@@ -23,6 +23,10 @@ public class ClientHandler {
         return user.getNickname();
     }
 
+    public void setUser(UserInfo user){
+        this.user = user;
+    }
+
     public ClientHandler(Socket socket, Server server) {
         this.server = server;
         this.socket = socket;
@@ -31,14 +35,14 @@ public class ClientHandler {
             out = new DataOutputStream(socket.getOutputStream());
             Thread clientThread = new Thread(() -> {
                 try {
-                    authenticate();
-                    if (hasLogin) communicate();
+                    while (true) {
+                        authenticate();
+                        if (hasLogin) communicate();
+                    }
                 } catch (IOException ex) {
                     System.out.println(ex.getMessage());
-                } finally {
                     disconnect();
                 }
-
             });
             clientThread.setDaemon(true);
             clientThread.start();
@@ -65,19 +69,17 @@ public class ClientHandler {
             if (msg.length < 2) continue;
             if (msg[0].equals(Commands.LOGIN)) {
                 LoginResponse response = server.login(msg[1], this);
-                if (response.getUser() == null)
-                    continue;
+                if (response.getMessage().startsWith(ServerResponse.LOGIN_OK)){
+                    user = response.getUser();
+                    hasLogin = true;
+                }
                 sendMessage(response.getMessage());
-                user = response.getUser();
-                hasLogin = true;
-                break;
             }
         }
-
     }
 
     private void communicate() throws IOException {
-        while (socket.isConnected()) {
+        while (!socket.isClosed()) {
             String msg = in.readUTF();
             if (msg.startsWith("/"))
                 server.process(msg, this);

@@ -17,7 +17,7 @@ public class Server {
     private Map<String, UserInfo> users;
 
     public Server(int port) throws IOException {
-        initUserInfo();
+        initUserInfo(); // заводим "базу" пользователей
         serverPort = port;
         serverSocket = new ServerSocket(serverPort);
         clients = new ArrayList<>();
@@ -63,22 +63,22 @@ public class Server {
         if (isOnline(user.getNickname())) {
             return new LoginResponse(null, ServerResponse.LOGIN_FAIL_CONNECTED);
         } else {
+            client.setUser(user);
             clients.add(client);
-            publish(user.getNickname() + " joined the chat. Welcome!", null);
+            publish(user.getNickname() + " has joined the chat. Welcome!", null);
             publishClientsList();
-            return new LoginResponse(user, ServerResponse.LOGIN_OK);
+            return new LoginResponse(user, ServerResponse.LOGIN_OK + user.getNickname());
         }
     }
 
     public synchronized void logout(ClientHandler client) {
         clients.remove(client);
-        publish(client.getNick() + " is leaving the chat. See ya later!", null);
+        publish(client.getNick() + " has left the chat. See ya!", null);
         publishClientsList();
-
     }
 
     public void process(String msg, ClientHandler client) {
-        String[] commands = msg.split(" ", 2);
+        String[] commands = msg.split("\\s", 2);
         switch (commands[0]) {
             case Commands.WHO_AM_I: {
                 client.sendMessage("You are " + client.getNick());
@@ -90,7 +90,7 @@ public class Server {
                 break;
             }
             case Commands.PRIVATE_MESSAGE: {
-                String[] split = commands[1].split(" ", 2);
+                String[] split = commands[1].split("\\s", 2);
                 ClientHandler destination = getClientByNick(split[0]);
                 if (destination != null) {
                     String out = getMessageString(split[1], client.getNick());
@@ -102,9 +102,9 @@ public class Server {
                 break;
             }
             case Commands.CHANGE_NICK:{
-                if (changeUserNick(commands[1], client))
-                    client.sendMessage(ServerResponse.CHANGE_NICK_OK);
-                else
+                if (changeUserNick(commands[1], client)) {
+                    client.sendMessage(ServerResponse.CHANGE_NICK_OK + commands[1]);
+                } else
                     client.sendMessage(ServerResponse.CHANGE_NICK_FAIL);
                 break;
             }
@@ -120,6 +120,7 @@ public class Server {
         String oldNick = client.getNick();
         client.getUser().setNickname(newNick);
         publish(oldNick + " has changed name to " + newNick, null);
+        publishClientsList();
         return true;
     }
 
@@ -156,23 +157,11 @@ public class Server {
         return false;
     }
 
-    public void initUserInfo(){
-        users = new HashMap<>();
-        List<UserInfo> list = Arrays.asList(
-                new UserInfo("bob", "bob1234","GreatBob"),
-                new UserInfo("jacky", "jacky1234","Jacky"),
-                new UserInfo("mike", "mike1234","Michael"),
-                new UserInfo("pat", "pat1234","Pat"),
-                new UserInfo("sue", "sue1234","Sue"),
-                new UserInfo("mary", "mary1234","Mary Jane")
-        );
-        for(UserInfo user : list){
-            users.put(user.getUsername(),user);
+    private synchronized void publishClientsList(){
+        String list = getClientsList();
+        for (ClientHandler c : clients){
+            c.sendMessage(list);
         }
-    }
-
-    public void publishClientsList(){
-        publish(getClientsList(), null);
     }
 
     private synchronized String getClientsList(){
@@ -183,6 +172,23 @@ public class Server {
         sb.setLength(sb.length() - 1);
         return sb.toString();
     }
+
+    public void initUserInfo(){
+        users = new HashMap<>();
+        List<UserInfo> list = Arrays.asList(
+                new UserInfo("bob", "bob1234","GreatBob"),
+                new UserInfo("jacky", "jacky1234","Jacky"),
+                new UserInfo("mike", "mike1234","Michael"),
+                new UserInfo("pat", "pat1234","Pat"),
+                new UserInfo("sue", "sue1234","Sue"),
+                new UserInfo("mary", "mary1234","Mary")
+        );
+        for(UserInfo user : list){
+            users.put(user.getUsername(),user);
+        }
+    }
+
+
 
 
 }
