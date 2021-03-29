@@ -3,15 +3,25 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
+<?import javafx.scene.text.Text?>
 <VBox fx:controller="ru.svetlov.chatClient.Controller" xmlns:fx="http://javafx.com/fxml">
-    <HBox fx:id="loginBox">
+    <HBox fx:id="loginBox" alignment="CENTER_RIGHT">
+        <Text text=" Username: "/>
         <TextField fx:id="loginField"
                    onAction="#btnLoginClick"
-                   promptText="type your name to login ..."
                    HBox.hgrow="ALWAYS"/>
-        <Button fx:id="btnLogin"
-                text="Login"
+        <Text text=" Password: "/>
+        <PasswordField fx:id="passwordField"
+                       onAction="#btnLoginClick"
+                       HBox.hgrow="ALWAYS"/>
+        <Button text="Login"
                 onAction="#btnLoginClick"
+                focusTraversable="false"/>
+    </HBox>
+    <HBox fx:id="headerBox" visible="false" managed="false">
+        <TextField fx:id="headerText" text="user nickname" HBox.hgrow="ALWAYS" editable="false"/>
+        <Button text="Logout"
+                onAction="#btnLogoutClick"
                 focusTraversable="false"/>
     </HBox>
     <HBox VBox.vgrow="ALWAYS">

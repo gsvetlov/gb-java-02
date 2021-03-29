@@ -13,18 +13,16 @@ import java.util.*;
 
 public class Controller implements Initializable {
     @FXML
-    TextField messageField, loginField;
+    TextField messageField, loginField, passwordField, headerText;
     @FXML
     TextArea messagesArea;
     @FXML
-    HBox messageBox, loginBox;
-    @FXML
-    Button btnLogin;
+    HBox messageBox, loginBox, headerBox;
     @FXML
     ListView<String> clientsList;
 
-    NetClient netClient;
-    Thread listener;
+    private NetClient netClient;
+    private Thread listener;
     private List<String> messages;
     private String nickName;
 
@@ -32,8 +30,8 @@ public class Controller implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         netClient = new NetClient("localhost", 8189);
         messages = new ArrayList<>();
-        listener = new Thread(()->{
-            while(true) {
+        listener = new Thread(() -> {
+            while (true) {
                 String message = netClient.nextMessage();
                 System.out.println(message);
                 process(message);
@@ -66,44 +64,44 @@ public class Controller implements Initializable {
         mArea.appendText(sb.toString());
     }
 
-
     private void process(String msg) {
         if (msg == null) return;
         if (msg.startsWith("/")) {
             String[] commands = msg.split("\\s", 2);
             switch (commands[0]) {
                 case "/logout": {
-                    Platform.runLater(() ->
-                            showAlert("Connection closed"));
+                    Platform.runLater(() -> {
+                        nickName = null;
+                        changeView(false);
+                    });
                     break;
                 }
                 case "/login_ok":
                 case "/change_nick_ok": {
-                    nickName = commands[1];
-                    Platform.runLater(this::processLogin);
+                    Platform.runLater(() -> {
+                        nickName = commands[1];
+                        changeView(true);
+                    });
                     break;
                 }
                 case "/login_nok": {
-                    Platform.runLater(() ->
-                            showAlert(commands[1]));
+                    Platform.runLater(() -> showAlert(commands[1]));
                     messages.add(commands[1]);
-                    Platform.runLater(this::processLogout);
+                    Platform.runLater(() -> changeView(false));
                     break;
                 }
-
-                case "/clients_list":{
+                case "/clients_list": {
                     String[] clients = commands[1].split("\\s");
                     System.out.println(commands[1]);
-                    Platform.runLater(()->{
+                    Platform.runLater(() -> {
                         clientsList.getItems().clear();
-                        for (String c : clients){
+                        for (String c : clients) {
                             clientsList.getItems().add(c);
                         }
                     });
                     break;
                 }
-
-                case "/change_nick_nok":{
+                case "/change_nick_nok": {
                     Platform.runLater(() ->
                             showAlert(commands[1]));
                     break;
@@ -117,63 +115,49 @@ public class Controller implements Initializable {
         update(messagesArea);
     }
 
-    // переписать на отдельную панель
-    private void processLogout() {
-        loginField.clear();
-        loginField.setEditable(true);
-        loginField.setPromptText("type your name and password to login ...");
-        loginField.requestFocus();
-        btnLogin.setText("Login");
-        messageBox.setManaged(false);
-        messageBox.setVisible(false);
-        netClient.disconnect();
-    }
-
-    // переписать на отдельную панель
-    private void processLogin() {
-        loginField.setEditable(false);
-        loginField.setFocusTraversable(false);
-        loginField.setText(nickName);
-        btnLogin.setText("Logout");
-        messageBox.setManaged(true);
-        messageBox.setVisible(true);
+    private void changeView(boolean isLogin) {
+        loginBox.setVisible(!isLogin);
+        loginBox.setManaged((!isLogin));
+        headerText.setText(nickName);
+        headerBox.setVisible(isLogin);
+        headerBox.setManaged(isLogin);
+        messageBox.setVisible(isLogin);
+        messageBox.setManaged(isLogin);
         messageField.requestFocus();
     }
 
     public void btnLoginClick() {
-        if (loginField.getText().isEmpty()) { // для простоты вводим имя пользователя и пароль через пробел
-            new Alert(
-                    Alert.AlertType.ERROR,
-                    "Username can't be empty",
-                    ButtonType.OK
-            ).showAndWait();
+        if (loginField.getText().isEmpty()) {
+            showAlert("Username can't be empty");
             return;
         }
         try {
             if (nickName == null) {
                 netClient.connect();
-                netClient.send("/login " + loginField.getText());
-
-            } else {
-                netClient.send("/logout");
-                nickName = null;
-                processLogout();
+                netClient.send("/login " + loginField.getText() + " " + passwordField.getText());
             }
         } catch (IOException ex) {
-            new Alert(
-                    Alert.AlertType.ERROR,
-                    "NetworkError",
-                    ButtonType.OK
-            ).showAndWait();
+            showAlert("NetworkError");
             System.out.println(ex.getMessage());
-            processLogout();
         }
     }
-    private void showAlert(String message){
+
+    public void btnLogoutClick() {
+        netClient.send("/logout");
+        nickName = null;
+        messagesArea.clear();
+        clientsList.getItems().clear();
+        changeView(false);
+
+    }
+
+    private void showAlert(String message) {
         new Alert(
                 Alert.AlertType.ERROR,
                 message,
                 ButtonType.OK
         ).showAndWait();
     }
+
+
 }

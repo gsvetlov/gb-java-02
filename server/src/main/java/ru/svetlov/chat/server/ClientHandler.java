@@ -41,6 +41,7 @@ public class ClientHandler {
                     }
                 } catch (IOException ex) {
                     System.out.println(ex.getMessage());
+                } finally {
                     disconnect();
                 }
             });
@@ -52,6 +53,7 @@ public class ClientHandler {
     }
 
     private void disconnect() {
+        hasLogin = false;
         if (socket == null) return;
         try {
             if (socket.isConnected()) {
@@ -85,6 +87,7 @@ public class ClientHandler {
                 server.process(msg, this);
             else
                 server.publish(msg, this);
+            if (msg.equals("/logout")) break;
         }
     }
 
