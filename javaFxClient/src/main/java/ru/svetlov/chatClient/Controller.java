@@ -24,7 +24,7 @@ public class Controller implements Initializable {
     ListView<String> clientsList;
 
     NetClient netClient;
-    Timer timer;
+    Thread listener;
     private List<String> messages;
     private String nickName;
 
@@ -32,14 +32,15 @@ public class Controller implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         netClient = new NetClient("localhost", 8189);
         messages = new ArrayList<>();
-        timer = new Timer(true);
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                while (netClient.getSize() != 0)
-                    process(netClient.dequeue());
+        listener = new Thread(()->{
+            while(true) {
+                String message = netClient.nextMessage();
+                System.out.println(message);
+                process(message);
             }
-        }, 1000, 200);
+        }); // не успел реализовать через callback
+        listener.setDaemon(true);
+        listener.start();
     }
 
 
@@ -69,15 +70,11 @@ public class Controller implements Initializable {
     private void process(String msg) {
         if (msg == null) return;
         if (msg.startsWith("/")) {
-            String[] commands = msg.split(" ", 2);
+            String[] commands = msg.split("\\s", 2);
             switch (commands[0]) {
                 case "/logout": {
                     Platform.runLater(() ->
-                            new Alert(
-                                    Alert.AlertType.ERROR,
-                                    "Connection closed",
-                                    ButtonType.OK
-                            ).showAndWait());
+                            showAlert("Connection closed"));
                     break;
                 }
                 case "/login_ok":
@@ -88,11 +85,7 @@ public class Controller implements Initializable {
                 }
                 case "/login_nok": {
                     Platform.runLater(() ->
-                            new Alert(
-                                    Alert.AlertType.ERROR,
-                                    commands[1],
-                                    ButtonType.OK
-                            ).showAndWait());
+                            showAlert(commands[1]));
                     messages.add(commands[1]);
                     Platform.runLater(this::processLogout);
                     break;
@@ -109,6 +102,12 @@ public class Controller implements Initializable {
                     });
                     break;
                 }
+
+                case "/change_nick_nok":{
+                    Platform.runLater(() ->
+                            showAlert(commands[1]));
+                    break;
+                }
                 default:
                     throw new IllegalStateException("Unexpected value: " + msg);
             }
@@ -118,6 +117,7 @@ public class Controller implements Initializable {
         update(messagesArea);
     }
 
+    // переписать на отдельную панель
     private void processLogout() {
         loginField.clear();
         loginField.setEditable(true);
@@ -129,6 +129,7 @@ public class Controller implements Initializable {
         netClient.disconnect();
     }
 
+    // переписать на отдельную панель
     private void processLogin() {
         loginField.setEditable(false);
         loginField.setFocusTraversable(false);
@@ -167,5 +168,12 @@ public class Controller implements Initializable {
             System.out.println(ex.getMessage());
             processLogout();
         }
+    }
+    private void showAlert(String message){
+        new Alert(
+                Alert.AlertType.ERROR,
+                message,
+                ButtonType.OK
+        ).showAndWait();
     }
 }
