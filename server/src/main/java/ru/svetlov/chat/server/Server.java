@@ -10,14 +10,15 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class Server {
+    private final AuthenticationProvider provider;
     private final int serverPort;
     private final ServerSocket serverSocket;
     private final List<ClientHandler> clients;
 
     private Map<String, UserInfo> users;
 
-    public Server(int port) throws IOException {
-        initUserInfo(); // заводим "базу" пользователей
+    public Server(int port, AuthenticationProvider provider) throws IOException {
+        this.provider = provider;
         serverPort = port;
         serverSocket = new ServerSocket(serverPort);
         clients = new ArrayList<>();
@@ -53,10 +54,10 @@ public class Server {
 
     public LoginResponse login(String loginMsg, ClientHandler client) {
 
-        String[] userInfoMsg = loginMsg.split("\\s", 2);
-        UserInfo user = users.get(userInfoMsg[0]);
+        String[] tokens = loginMsg.split("\\s", 2);
+        UserInfo user = provider.authenticate(tokens[0], tokens[1]);
 
-        if (user == null || !user.checkPassword(userInfoMsg[1])) {
+        if (user == null) {
             return new LoginResponse(null, ServerResponse.LOGIN_FAIL_INCORRECT);
         }
 
@@ -117,9 +118,11 @@ public class Server {
 
     private synchronized boolean changeUserNick(String newNick, ClientHandler client){
         if (isOnline(newNick)) return false;
-        String oldNick = client.getNick();
-        client.getUser().setNickname(newNick);
-        publish(oldNick + " has changed name to " + newNick, null);
+        UserInfo oldUser = client.getUser();
+        UserInfo newUser = new UserInfo(oldUser.getUsername(), newNick, oldUser.getId());
+        if (!provider.update(oldUser, newUser)) return false;
+        client.setUser(newUser);
+        publish(oldUser.getNickname() + " has changed name to " + newNick, null);
         publishClientsList();
         return true;
     }
@@ -172,23 +175,4 @@ public class Server {
         sb.setLength(sb.length() - 1);
         return sb.toString();
     }
-
-    public void initUserInfo(){
-        users = new HashMap<>();
-        List<UserInfo> list = Arrays.asList(
-                new UserInfo("bob", "bob1234","GreatBob"),
-                new UserInfo("jacky", "jacky1234","Jacky"),
-                new UserInfo("mike", "mike1234","Michael"),
-                new UserInfo("pat", "pat1234","Pat"),
-                new UserInfo("sue", "sue1234","Sue"),
-                new UserInfo("mary", "mary1234","Mary")
-        );
-        for(UserInfo user : list){
-            users.put(user.getUsername(),user);
-        }
-    }
-
-
-
-
 }

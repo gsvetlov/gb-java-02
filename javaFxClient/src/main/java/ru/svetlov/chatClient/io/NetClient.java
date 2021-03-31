@@ -4,13 +4,13 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class NetClient {
     private final String host;
     private final int port;
-    private final Queue<String> processQueue;
+    private final BlockingQueue<String> processQueue;
     private final Object queueLock = new Object();
     private Socket socket;
     private DataOutputStream outStream;
@@ -19,7 +19,7 @@ public class NetClient {
     public NetClient(String host, int port) {
         this.host = host;
         this.port = port;
-        this.processQueue = new LinkedList<>();
+        this.processQueue = new LinkedBlockingQueue<>();
     }
 
     public void connect() throws IOException {
@@ -31,10 +31,9 @@ public class NetClient {
             try {
                 while (true) {
                     String in = inStream.readUTF();
-                    System.out.println(in);
-                    enqueue(in);
+                    processQueue.put(in);
                 }
-            } catch (IOException ex) {
+            } catch (IOException | InterruptedException ex) {
                 System.out.println(ex.getMessage());
             } finally {
                 disconnect();
@@ -44,22 +43,13 @@ public class NetClient {
         listener.start();
     }
 
-    private void enqueue(String in) {
-        synchronized (queueLock) {
-            processQueue.add(in);
+    public String nextMessage() {
+        try {
+            return processQueue.take();
+        } catch (InterruptedException e) {
+            System.out.println(e.getMessage());
         }
-    }
-
-    public String dequeue() {
-        synchronized (queueLock) {
-            return processQueue.poll();
-        }
-    }
-
-    public int getSize() {
-        synchronized (queueLock) {
-            return processQueue.size();
-        }
+        return null;
     }
 
     public void send(String msg) {

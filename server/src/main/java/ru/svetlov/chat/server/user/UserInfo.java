@@ -1,55 +1,35 @@
 package ru.svetlov.chat.server.user;
 
 public class UserInfo {
-    private final String username;
-    private String password;
+    private int id = -1;
+    private String username;
     private String nickname;
+
+    public int getId(){
+        return id;
+    }
 
     public String getUsername() {
         return username;
     }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+    public void setUsername(String username){
+        this.username = username;
     }
 
     public String getNickname() {
         return nickname;
     }
-
-    public void setNickname(String nickname) {
+    public void setNickname(String nickname){
         this.nickname = nickname;
     }
 
-    public UserInfo(String username, String password, String nickname) {
+    public UserInfo(String username, String nickname) {
         this.username = username;
-        this.password = password;
         this.nickname = nickname;
     }
-
-    public boolean checkPassword(String password){
-        return this.password.equals(password);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        UserInfo userInfo = (UserInfo) o;
-
-        if (!username.equals(userInfo.username)) return false;
-        return nickname.equals(userInfo.nickname);
-    }
-
-    @Override
-    public int hashCode() {
-        int result = username.hashCode();
-        result = 31 * result + nickname.hashCode();
-        return result;
+    public UserInfo(String username, String nickname, int id) {
+        this.username = username;
+        this.nickname = nickname;
+        this.id = id;
     }
 }
