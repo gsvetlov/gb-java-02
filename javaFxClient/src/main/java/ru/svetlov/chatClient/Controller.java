@@ -5,6 +5,9 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import ru.svetlov.chatClient.io.FileLogger;
+import ru.svetlov.chatClient.io.LogMessage;
+import ru.svetlov.chatClient.io.Logger;
 import ru.svetlov.chatClient.io.NetClient;
 
 import java.io.IOException;
@@ -25,6 +28,7 @@ public class Controller implements Initializable {
     private Thread listener;
     private List<String> messages;
     private String nickName;
+    private Logger logger;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -39,6 +43,7 @@ public class Controller implements Initializable {
         }); // не успел реализовать через callback
         listener.setDaemon(true);
         listener.start();
+        logger = new FileLogger("chatLog.log", true);
     }
 
 
@@ -81,6 +86,8 @@ public class Controller implements Initializable {
                     Platform.runLater(() -> {
                         nickName = commands[1];
                         changeView(true);
+                        messages.addAll(logger.getEntries(nickName));
+                        update(messagesArea);
                     });
                     break;
                 }
@@ -111,6 +118,8 @@ public class Controller implements Initializable {
             }
         } else {
             messages.add(msg);
+            if (nickName != null)
+                logger.log(new LogMessage(nickName, msg));
         }
         update(messagesArea);
     }
