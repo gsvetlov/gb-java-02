@@ -6,6 +6,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
 
 public class ClientHandler {
     private final Server server;
@@ -14,6 +15,7 @@ public class ClientHandler {
     private DataOutputStream out;
     private UserInfo user;
     private boolean hasLogin;
+
 
     public UserInfo getUser() {
         return user;
@@ -27,15 +29,15 @@ public class ClientHandler {
         this.user = user;
     }
 
-    public ClientHandler(Socket socket, Server server) {
+    public ClientHandler(Socket socket, Server server, ExecutorService threadPool) {
         this.server = server;
         this.socket = socket;
         try {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
-            Thread clientThread = new Thread(() -> {
+            threadPool.execute(() -> {
                 try {
-                    while (true) {
+                    while (Thread.interrupted()) {
                         authenticate();
                         if (hasLogin) communicate();
                     }
@@ -45,8 +47,6 @@ public class ClientHandler {
                     disconnect();
                 }
             });
-            clientThread.setDaemon(true);
-            clientThread.start();
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
         }
