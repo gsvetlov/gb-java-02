@@ -36,8 +36,9 @@ public class ClientHandler {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
             threadPool.execute(() -> {
+
                 try {
-                    while (Thread.interrupted()) {
+                    while (!Thread.interrupted()) {
                         authenticate();
                         if (hasLogin) communicate();
                     }
