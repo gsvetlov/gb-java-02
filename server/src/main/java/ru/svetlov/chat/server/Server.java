@@ -8,6 +8,8 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server {
     private final AuthenticationProvider provider;
@@ -15,29 +17,35 @@ public class Server {
     private final ServerSocket serverSocket;
     private final List<ClientHandler> clients;
 
-    private Map<String, UserInfo> users;
-
     public Server(int port, AuthenticationProvider provider) throws IOException {
         this.provider = provider;
         serverPort = port;
         serverSocket = new ServerSocket(serverPort);
         clients = new ArrayList<>();
-        Thread listener = new Thread(()->{
+        // на мой взгляд, применение пула потоков в данном случае не несет ни плюсов, ни минусов (кроме того, что мы
+        // в фабрике для всех потоков зададим Daemon(true)), так как высвободить поток мы сможем только после отключения
+        // клиента, то есть переиспользовать потоки мы сможем не часто, а это сводит на нет преимущество пула перед
+        // обычным потоком.
+        ExecutorService threadPool = Executors.newCachedThreadPool((runnable)->{
+            Thread t = new Thread(runnable);
+            t.setDaemon(true);
+            return t;
+        });
+        threadPool.execute(()->{
             try {
                 while (!Thread.interrupted()) {
                     System.out.printf("Listening on [localhost:%d]%n", serverPort);
                     Socket socket = serverSocket.accept();
                     System.out.println("connection established...");
-                    new ClientHandler(socket, this);
+                    new ClientHandler(socket, this, threadPool);
                 }
             } catch (IOException ex) {
                 System.out.println(ex.getMessage());
             } finally {
                 shutdown();
+                threadPool.shutdown();
             }
         });
-        listener.setDaemon(true);
-        listener.start();
     }
 
     public synchronized void shutdown() {
