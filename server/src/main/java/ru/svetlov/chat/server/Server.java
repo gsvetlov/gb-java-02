@@ -1,5 +1,8 @@
 package ru.svetlov.chat.server;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import ru.svetlov.chat.server.user.UserInfo;
 
 import java.io.IOException;
@@ -12,6 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
+    private static final Logger log = LogManager.getLogger();
     private final AuthenticationProvider provider;
     private final int serverPort;
     private final ServerSocket serverSocket;
@@ -21,29 +25,32 @@ public class Server {
         this.provider = provider;
         serverPort = port;
         serverSocket = new ServerSocket(serverPort);
+        log.info("ServerSocket created on {}:{}",serverSocket.getInetAddress(), serverSocket.getLocalPort());
         clients = new ArrayList<>();
-        // на мой взгляд, применение пула потоков в данном случае не несет ни плюсов, ни минусов (кроме того, что мы
-        // в фабрике для всех потоков зададим Daemon(true)), так как высвободить поток мы сможем только после отключения
-        // клиента, то есть переиспользовать потоки мы сможем не часто, а это сводит на нет преимущество пула перед
-        // обычным потоком.
-        ExecutorService threadPool = Executors.newCachedThreadPool((runnable)->{
+        ExecutorService threadPool = Executors.newCachedThreadPool((runnable) -> {
             Thread t = new Thread(runnable);
             t.setDaemon(true);
             return t;
         });
-        threadPool.execute(()->{
+        threadPool.execute(() -> {
+            log.trace("Server thread created");
             try {
+                log.info("Listening on port {}", serverSocket.getLocalPort());
                 while (!Thread.interrupted()) {
-                    System.out.printf("Listening on [localhost:%d]%n", serverPort);
                     Socket socket = serverSocket.accept();
-                    System.out.println("connection established...");
-                    new ClientHandler(socket, this, threadPool);
+                    log.trace("connection established...");
+                    ClientHandler client = new ClientHandler(socket, this, threadPool);
+                    log.trace("new ClientHandler: {}", client);
                 }
-            } catch (IOException ex) {
-                System.out.println(ex.getMessage());
+            } catch (SocketException e) {
+                log.warn(e.getMessage());
+            } catch (IOException e) {
+                log.throwing(Level.ERROR, e);
             } finally {
+                log.debug("Server shutdown initiated");
                 shutdown();
                 threadPool.shutdown();
+                log.warn("Server shutdown successful");
             }
         });
     }
@@ -51,27 +58,31 @@ public class Server {
     public synchronized void shutdown() {
         try {
             serverSocket.close();
-        } catch (SocketException e) {
-            System.out.println(e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.throwing(Level.ERROR, e);
         }
+        log.debug("Logout of {} clients initiated", clients.size());
         while (clients.size() > 0)
             logout(clients.get(0));
+        log.debug("Logout of clients finished");
     }
 
     public LoginResponse login(String loginMsg, ClientHandler client) {
-
+        log.debug("Client login requested: {}", loginMsg);
         String[] tokens = loginMsg.split("\\s", 2);
+        log.info("Login initiated with tokens: [{}] [{}]", tokens[0], tokens[1]);
         UserInfo user = provider.authenticate(tokens[0], tokens[1]);
 
         if (user == null) {
+            log.info("Login failed");
             return new LoginResponse(null, ServerResponse.LOGIN_FAIL_INCORRECT);
         }
 
         if (isOnline(user.getNickname())) {
+            log.info("Login failed. User is already online");
             return new LoginResponse(null, ServerResponse.LOGIN_FAIL_CONNECTED);
         } else {
+            log.info("Login successful. User: {}, Nick: {}", user.getUsername(), user.getNickname());
             client.setUser(user);
             clients.add(client);
             publish(user.getNickname() + " has joined the chat. Welcome!", null);
@@ -87,6 +98,7 @@ public class Server {
     }
 
     public void process(String msg, ClientHandler client) {
+        log.debug("Incoming command: {} from {}", msg, client);
         String[] commands = msg.split("\\s", 2);
         switch (commands[0]) {
             case Commands.WHO_AM_I: {
@@ -105,12 +117,11 @@ public class Server {
                     String out = getMessageString(split[1], client.getNick());
                     destination.sendMessage(out);
                     client.sendMessage(out);
-                }
-                else
+                } else
                     client.sendMessage("User " + split[0] + " offline or unknown ");
                 break;
             }
-            case Commands.CHANGE_NICK:{
+            case Commands.CHANGE_NICK: {
                 if (changeUserNick(commands[1], client)) {
                     client.sendMessage(ServerResponse.CHANGE_NICK_OK + commands[1]);
                 } else
@@ -124,7 +135,8 @@ public class Server {
 
     }
 
-    private synchronized boolean changeUserNick(String newNick, ClientHandler client){
+    private synchronized boolean changeUserNick(String newNick, ClientHandler client) {
+        log.debug("Change of nick {} to {} requested by {}", client.getNick(), newNick, client.getUser());
         if (isOnline(newNick)) return false;
         UserInfo oldUser = client.getUser();
         UserInfo newUser = new UserInfo(oldUser.getUsername(), newNick, oldUser.getId());
@@ -136,16 +148,17 @@ public class Server {
     }
 
     private synchronized ClientHandler getClientByNick(String s) {
-        for(ClientHandler client : clients){
+        for (ClientHandler client : clients) {
             if (s.equals(client.getNick()))
                 return client;
         }
-        return  null;
+        return null;
     }
 
     public synchronized void publish(String msg, ClientHandler client) {
         String userName = client == null ? "Server" : client.getNick();
         String outMsg = getMessageString(msg, userName);
+        log.trace("publishing {}", outMsg);
         for (ClientHandler c : clients) {
             c.sendMessage(outMsg);
         }
@@ -168,14 +181,14 @@ public class Server {
         return false;
     }
 
-    private synchronized void publishClientsList(){
+    private synchronized void publishClientsList() {
         String list = getClientsList();
-        for (ClientHandler c : clients){
+        for (ClientHandler c : clients) {
             c.sendMessage(list);
         }
     }
 
-    private synchronized String getClientsList(){
+    private synchronized String getClientsList() {
         StringBuilder sb = new StringBuilder("/clients_list ");
         for (ClientHandler c : clients) {
             sb.append(c.getNick()).append(" ");
