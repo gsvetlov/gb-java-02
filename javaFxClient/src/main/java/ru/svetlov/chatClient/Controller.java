@@ -43,7 +43,7 @@ public class Controller implements Initializable {
         }); // не успел реализовать через callback
         listener.setDaemon(true);
         listener.start();
-        logger = new FileLogger("chatLog.log", true);
+        logger = new FileLogger("logs/chatLog.log", true);
     }
 
 

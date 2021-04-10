@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn" monitorInterval="60">
+    <Properties>
+        <Property name="basePath">logs</Property>
+    </Properties>
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+        <Console name="ConsoleERR" target="SYSTEM_ERR">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+        <File name="ServerFile" fileName="${basePath}/server.log" append="true">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </File>
+        <File name="SecurityFile" fileName="${basePath}/access.log" append="true">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </File>
+    </Appenders>
+    <Loggers>
+        <Root level="warn">
+            <AppenderRef ref="Console"/>
+        </Root>
+        <Logger name="ru.svetlov.chat.server" level="DEBUG">
+            <AppenderRef ref="ServerFile"/>
+        </Logger>
+        <Logger name="ru.svetlov.chat.server.ClientHandler" level="INFO">
+            <AppenderRef ref="ServerFile"/>
+        </Logger>
+        <Logger name="ru.svetlov.chat.server.dbc" level="WARN" additivity="false">
+            <AppenderRef ref="SecurityFile"/>
+            <AppenderRef ref="ConsoleERR"/>
+        </Logger>
+    </Loggers>
+</Configuration>
